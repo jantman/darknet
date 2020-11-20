@@ -48,9 +48,11 @@ metadata get_metadata(char *file)
     }
     m.classes = option_find_int(options, "classes", 2);
     free_list(options);
+    /*
     if(name_list) {
         printf("Loaded - names_list: %s, classes = %d \n", name_list, m.classes);
     }
+    */
     return m;
 }
 

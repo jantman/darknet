@@ -25,6 +25,10 @@ from ctypes import *
 import math
 import random
 import os
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
 
 
 class BOX(Structure):
@@ -109,11 +113,19 @@ def load_network(config_file, data_file, weights, batch_size=1):
         class_names
         class_colors
     """
+    logger.debug(
+        'Call load_net_custom config_file=%s weights=%s', config_file, weights
+    )
     network = load_net_custom(
         config_file.encode("ascii"),
         weights.encode("ascii"), 0, batch_size)
+    logger.debug(
+        'Call load_meta data_file=%s', data_file
+    )
     metadata = load_meta(data_file.encode("ascii"))
+    logger.debug('Generate class names')
     class_names = [metadata.names[i].decode("ascii") for i in range(metadata.classes)]
+    logger.debug('Generate colors')
     colors = class_colors(class_names)
     return network, class_names, colors
 
@@ -165,16 +177,24 @@ def detect_image(network, class_names, image, thresh=.5, hier_thresh=.5, nms=.45
     """
         Returns a list with highest confidence class and their bbox
     """
+    logger.debug('Call detect_image')
     pnum = pointer(c_int(0))
+    logger.debug('Predicting image')
     predict_image(network, image)
+    logger.debug('Getting network boxes')
     detections = get_network_boxes(network, image.w, image.h,
                                    thresh, hier_thresh, None, 0, pnum, 0)
     num = pnum[0]
     if nms:
+        logger.debug('Doing nms sort')
         do_nms_sort(detections, num, len(class_names), nms)
+    logger.debug('Removing negatives')
     predictions = remove_negatives(detections, class_names, num)
+    logger.debug('Decoding detection')
     predictions = decode_detection(predictions)
+    logger.debug('Freeing detections')
     free_detections(detections, num)
+    logger.debug('Returning result')
     return sorted(predictions, key=lambda x: x[1])
 
 
@@ -195,7 +215,7 @@ if os.name == "nt":
             if tmp in ["1", "true", "yes", "on"]:
                 raise ValueError("ForceCPU")
             else:
-                print("Flag value {} not forcing CPU mode".format(tmp))
+                logger.error("Flag value {} not forcing CPU mode".format(tmp))
         except KeyError:
             # We never set the flag
             if 'CUDA_VISIBLE_DEVICES' in envKeys:
@@ -206,7 +226,7 @@ if os.name == "nt":
                 if DARKNET_FORCE_CPU:
                     raise ValueError("ForceCPU")
             except NameError as cpu_error:
-                print(cpu_error)
+                logger.error(cpu_error)
         if not os.path.exists(winGPUdll):
             raise ValueError("NoDLL")
         lib = CDLL(winGPUdll, RTLD_GLOBAL)
@@ -214,11 +234,11 @@ if os.name == "nt":
         hasGPU = False
         if os.path.exists(winNoGPUdll):
             lib = CDLL(winNoGPUdll, RTLD_GLOBAL)
-            print("Notice: CPU-only mode")
+            logger.error("Notice: CPU-only mode")
         else:
             # Try the other way, in case no_gpu was compile but not renamed
             lib = CDLL(winGPUdll, RTLD_GLOBAL)
-            print("Environment variables indicated a CPU run, but we didn't find {}. Trying a GPU run anyway.".format(winNoGPUdll))
+            logger.error("Environment variables indicated a CPU run, but we didn't find {}. Trying a GPU run anyway.".format(winNoGPUdll))
 else:
     lib = CDLL(os.path.join(
         os.environ.get('DARKNET_PATH', './'),
