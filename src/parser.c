@@ -2074,7 +2074,7 @@ void load_shortcut_weights(layer l, FILE *fp)
     int num = l.nweights;
     int read_bytes;
     read_bytes = fread(l.weights, sizeof(float), num, fp);
-    if (read_bytes > 0 && read_bytes < num) //printf("\n Warning: Unexpected end of wights-file! l.weights - l.index = %d \n", l.index);
+    if (read_bytes > 0 && read_bytes < num) printf("\n Warning: Unexpected end of wights-file! l.weights - l.index = %d \n", l.index);
     //for (int i = 0; i < l.nweights; ++i) //printf(" %f, ", l.weights[i]);
     ////printf(" read_bytes = %d \n\n", read_bytes);
 #ifdef GPU
